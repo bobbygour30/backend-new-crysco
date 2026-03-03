@@ -62,10 +62,11 @@ export const createBulkProduct = async (req, res) => {
 // GET ALL
 export const getBulkProducts = async (req, res) => {
   try {
-    const products = await BulkProduct.find().sort({ createdAt: -1 });
+    const products = await BulkProduct.find(); // Or whatever model you use
     res.json(products);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error fetching bulk products:", error); // <- log error
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
