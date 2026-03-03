@@ -70,17 +70,17 @@ export const getBulkProductById = async (req, res) => {
   }
 };
 
-// ✅ UPDATE
 export const updateBulkProduct = async (req, res) => {
   try {
-    const { title, category, variants, amazonLink, description, highlights } = req.body;
+    const { title, category, amazonLink, description } = req.body;
 
-    const parsedVariants = JSON.parse(variants || "[]");
-    const parsedHighlights = JSON.parse(highlights || "[]");
+    const parsedVariants = JSON.parse(req.body.variants || "[]");
+    const parsedHighlights = JSON.parse(req.body.highlights || "[]");
+    const parsedExistingImages = JSON.parse(req.body.existingImages || "[]");
 
     let uploadedImages = [];
 
-    // ✅ Optional new image upload
+    // 🔥 Upload new images if any
     if (req.files && req.files.length > 0) {
       for (let file of req.files) {
         const result = await new Promise((resolve, reject) => {
@@ -93,27 +93,38 @@ export const updateBulkProduct = async (req, res) => {
           );
           stream.end(file.buffer);
         });
+
         uploadedImages.push(result.secure_url);
       }
     }
 
-    const updated = await BulkProduct.findByIdAndUpdate(
+    // 🔥 Merge existing + new images
+    const finalImages = [...parsedExistingImages, ...uploadedImages];
+
+    const updatedProduct = await BulkProduct.findByIdAndUpdate(
       req.params.id,
       {
         title,
         category,
-        variants: parsedVariants,
         amazonLink,
         description,
+        variants: parsedVariants,
         highlights: parsedHighlights,
-        ...(uploadedImages.length > 0 && { images: uploadedImages }),
+        images: finalImages,
       },
       { new: true }
     );
 
-    res.status(200).json(updated);
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json({
+      message: "Bulk Product Updated Successfully",
+      product: updatedProduct,
+    });
   } catch (error) {
-    console.error("❌ Error in updateBulkProduct:", error.message);
+    console.error("❌ Error in updateBulkProduct:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
