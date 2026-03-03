@@ -42,12 +42,12 @@ app.use(cors(corsOptions));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/products/bulk", bulkRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/buy-now", buyNowRoutes);
-app.use("/api/products/bulk", bulkRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running!");
