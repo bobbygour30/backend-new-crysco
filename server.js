@@ -49,7 +49,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/bulk-payment", bulkPaymentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/orders", orderRoutes);
-app.use("/api/buy-now", buyNowRoutes);
+app.use("/api/buy-now", buyNowRoutes);  
 
 app.get("/", (req, res) => {
   res.send("Backend is running!");
