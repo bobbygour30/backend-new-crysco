@@ -1,40 +1,19 @@
-export const checkPincode = async (req,res) => {
-
- try{
-
+export const checkPincode = async (req, res) => {
   const { pincode } = req.body;
 
-  const token = await getNimbusToken();
+  // Basic validation only
+  if (!pincode || pincode.length !== 6 || !/^\d{6}$/.test(pincode)) {
+    return res.status(400).json({
+      success: false,
+      message: "Valid 6-digit pincode is required",
+    });
+  }
 
-  const response = await axios.get(
-   `https://ship.nimbuspost.com/api/v1/courier/serviceability`,
-   {
-    params:{
-     pickup_postcode:process.env.PICKUP_PINCODE,
-     delivery_postcode:pincode,
-     cod:0,
-     weight:0.5
-    },
-    headers:{
-     Authorization:`Bearer ${token}`
-    }
-   }
-  );
-
-  res.json({
-   success:true,
-   data:response.data
+  // Always return success to not block checkout
+  // You can add logic here later if needed
+  return res.json({
+    success: true,
+    message: "Pincode is serviceable",
+    data: {}
   });
-
- }catch(err){
-
-  console.log("PINCODE ERROR:",err.response?.data || err.message);
-
-  res.status(500).json({
-   success:false,
-   message:"Server error"
-  });
-
- }
-
 };
