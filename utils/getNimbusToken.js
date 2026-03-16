@@ -3,7 +3,7 @@ import axios from "axios";
 export const getNimbusToken = async () => {
   try {
     const res = await axios.post("https://api.nimbuspost.com/v1/users/login", {
-      email: process.env.NIMBUS_EMAIL,
+      email: process.env.NIMBUS_VERIFIED_EMAIL,
       password: process.env.NIMBUS_PASSWORD,
     });
 

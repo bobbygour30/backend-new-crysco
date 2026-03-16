@@ -1,10 +1,13 @@
 import axios from "axios";
+import Cart from "../models/Cart.js";
 import { getNimbusToken } from "../utils/getNimbusToken.js";
+import Order from "../models/Order.js"; 
 
 export const createShipment = async (req, res) => {
   try {
     const {
       orderId,
+      userId,
       fullName,
       phone,
       address,
@@ -15,9 +18,21 @@ export const createShipment = async (req, res) => {
       totalAmount,
     } = req.body;
 
-    // Validate required fields
+    console.log("[Shipment] Received request:", {
+      orderId,
+      userId,
+      fullName,
+      phone,
+      city,
+      pincode,
+      itemsCount: items?.length,
+      totalAmount
+    });
+
+    // ✅ Validate required fields
     if (
       !orderId ||
+      !userId ||
       !fullName?.trim() ||
       !phone?.trim() ||
       !address?.trim() ||
@@ -33,17 +48,24 @@ export const createShipment = async (req, res) => {
       });
     }
 
-    // Get NimbusPost token
+    // ✅ Get NimbusPost token
     const token = await getNimbusToken();
 
-    // Calculate total weight (500g per item as base)
-    const totalWeight = items.reduce((sum, item) => 
-      sum + (Number(item.quantity) * 500), 0);
+    // ✅ Calculate total weight (500g per item)
+    const totalWeight = items.reduce(
+      (sum, item) => sum + Number(item.quantity || 1) * 500,
+      0
+    );
 
-    // Format phone number (remove non-digits)
     const formattedPhone = phone.replace(/\D/g, "");
 
-    // Prepare the payload according to NimbusPost API docs
+    const supportEmail =
+      process.env.NIMBUS_VERIFIED_EMAIL || "trikayafashion01@gmail.com";
+
+    const supportPhone =
+      process.env.PICKUP_PHONE || "9990955454";
+
+    // ✅ Nimbus payload
     const payload = {
       order_number: orderId,
       payment_type: "prepaid",
@@ -56,6 +78,10 @@ export const createShipment = async (req, res) => {
       shipping_charges: 0,
       cod_charges: 0,
       discount: 0,
+
+      support_email: supportEmail,
+      support_phone: supportPhone,
+
       consignee: {
         name: fullName.trim(),
         address: address.trim(),
@@ -65,27 +91,35 @@ export const createShipment = async (req, res) => {
         pincode: pincode,
         phone: formattedPhone,
       },
+
       pickup: {
-        warehouse_name: process.env.PICKUP_WAREHOUSE_NAME || "Trikaya Fashion India",
+        warehouse_name:
+          process.env.PICKUP_WAREHOUSE_NAME || "Trikaya Fashion India",
         name: process.env.PICKUP_CONTACT_PERSON || "Satish Kumar",
-        address: process.env.PICKUP_ADDRESS || "SHOP NO.20 SURAJ MARKET OM NAGAR MOHAN NAGAR",
+        address:
+          process.env.PICKUP_ADDRESS ||
+          "SHOP NO.20 SURAJ MARKET OM NAGAR MOHAN NAGAR",
         address_2: "",
         city: process.env.PICKUP_CITY || "Ghaziabad",
         state: process.env.PICKUP_STATE || "Uttar Pradesh",
         pincode: process.env.PICKUP_PINCODE || "201007",
         phone: process.env.PICKUP_PHONE || "9990955454",
       },
+
       order_items: items.map((item, index) => ({
-        name: (item.name || "Product").trim().substring(0, 100),
+        name: (item.title || "Product").substring(0, 100),
         qty: String(Number(item.quantity) || 1),
         price: String(Number(item.price) || 0),
-        sku: item.sku || item._id || `SKU-${String(index + 1).padStart(3, '0')}`,
+        sku:
+          item.sku ||
+          item.productId ||
+          `SKU-${String(index + 1).padStart(3, "0")}`,
       })),
     };
 
-    console.log("[Nimbus] Shipment payload:", JSON.stringify(payload, null, 2));
+    console.log("[Nimbus] Shipment payload:", payload);
 
-    // Make API call to NimbusPost
+    // ✅ Call Nimbus API
     const response = await axios.post(
       "https://api.nimbuspost.com/v1/shipments",
       payload,
@@ -94,43 +128,64 @@ export const createShipment = async (req, res) => {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        timeout: 10000 // 10 second timeout
+        timeout: 10000,
       }
     );
 
     console.log("[Nimbus] Shipment response:", response.data);
 
-    // Check if shipment was created successfully
     if (!response.data?.status) {
       throw new Error(response.data?.message || "NimbusPost rejected shipment");
     }
 
-    // Return success response with shipment details
+    // ✅ IMPORTANT: Save order to database
+    const newOrder = new Order({
+      user: userId,
+      items: items,
+      shippingAddress: {
+        fullName,
+        phone,
+        address,
+        city,
+        pincode,
+      },
+      totalAmount: totalAmount,
+      razorpayOrderId: orderId,
+      status: "Paid",
+      orderStatus: "Processing",
+    });
+
+    await newOrder.save();
+    console.log("[Database] Order saved successfully with ID:", newOrder._id);
+
+    // ✅ Clear cart
+    await Cart.updateOne(
+      { user: userId },
+      { $set: { items: [] } }
+    );
+
+    console.log("Cart items cleared for user:", userId);
+
     res.json({
       success: true,
       shipment: response.data.data,
       awb: response.data.data?.awb_number || null,
       order_id: response.data.data?.order_id || orderId,
-      message: "Shipment created successfully"
+      db_order_id: newOrder._id,
+      message: "Shipment created and order saved successfully",
     });
 
   } catch (error) {
     console.error("[Shipment Creation Error]:", {
-      status: error.response?.status,
-      data: error.response?.data,
       message: error.message,
-      stack: error.stack
+      response: error.response?.data,
     });
 
-    // Return detailed error for debugging
-    res.status(error.response?.status || 500).json({
+    res.status(200).json({
       success: false,
-      message: error.response?.data?.message || error.message || "Failed to create shipment",
-      error: error.response?.data || null,
-      // Don't block the order - payment is already successful
-      // The order can be created manually later
-      order_placed: true,
-      note: "Payment successful but shipment creation failed. Our team will create the shipment manually."
+      message: "Payment successful but shipment creation failed",
+      error: error.message,
+      orderId: req.body.orderId,
     });
   }
 };

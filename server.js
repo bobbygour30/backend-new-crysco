@@ -11,6 +11,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import buyNowRoutes from "./routes/buyNowRoutes.js";
 import bulkRoutes from "./routes/bulkRoutes.js";
+import adminOrderRoutes from "./routes/adminOrderRoutes.js";
 import { promises as dns } from "dns";
 
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
@@ -24,6 +25,7 @@ app.use(express.json());
 
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "https://crysco-frontend.vercel.app",
   "https://cryscoindia.com",
   "https://www.cryscoindia.com"
@@ -52,6 +54,7 @@ app.use("/api/bulk-payment", bulkPaymentRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/buy-now", buyNowRoutes);  
+app.use("/api/orders", adminOrderRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running!");
