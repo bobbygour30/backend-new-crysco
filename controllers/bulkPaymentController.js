@@ -7,12 +7,9 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-
 // ================= CREATE ORDER =================
-
 export const createBulkOrder = async (req, res) => {
   try {
-
     const { amount } = req.body;
 
     if (!amount) {
@@ -33,20 +30,15 @@ export const createBulkOrder = async (req, res) => {
       currency: order.currency,
       key: process.env.RAZORPAY_KEY_ID,
     });
-
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Order creation failed" });
   }
 };
 
-
-
 // ================= VERIFY PAYMENT =================
-
 export const verifyBulkPayment = async (req, res) => {
   try {
-
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -66,20 +58,18 @@ export const verifyBulkPayment = async (req, res) => {
       return res.status(400).json({ message: "Payment verification failed" });
     }
 
+    // ✅ Create order with proper size information
     const order = await BulkOrder.create({
       userId: req.user._id,
-
       product: {
         productId: product._id,
         title: product.title,
         price: product.price,
-        size: product.size,
-        color: product.color,
+        size: product.size || null,  // ✅ Store the selected size
+        color: product.color || null,
         image: product.image,
       },
-
       shippingAddress,
-
       paymentId: razorpay_payment_id,
       orderId: razorpay_order_id,
       signature: razorpay_signature,
@@ -89,26 +79,20 @@ export const verifyBulkPayment = async (req, res) => {
       success: true,
       order,
     });
-
   } catch (error) {
     console.log(error);
     res.status(500).json({ message: "Payment verification failed" });
   }
 };
 
-
-
 // ================= GET USER BULK ORDERS =================
-
 export const getMyBulkOrders = async (req, res) => {
   try {
-
     const orders = await BulkOrder.find({
       userId: req.user._id,
     }).sort({ createdAt: -1 });
 
     res.json(orders);
-
   } catch (error) {
     res.status(500).json({ message: "Error fetching orders" });
   }

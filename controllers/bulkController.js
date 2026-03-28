@@ -4,14 +4,16 @@ import cloudinary from "../config/cloudnary.js";
 // ✅ CREATE BULK PRODUCT
 export const createBulkProduct = async (req, res) => {
   try {
-    const { title, category, variants, amazonLink, description, highlights } = req.body;
+    const { title, category, sizes, packs, priceMatrix, amazonLink, description, highlights } = req.body;
 
-    const parsedVariants = JSON.parse(variants || "[]");
+    const parsedSizes = JSON.parse(sizes || "[]");
+    const parsedPacks = JSON.parse(packs || "[]");
+    const parsedPriceMatrix = JSON.parse(priceMatrix || "[]");
     const parsedHighlights = JSON.parse(highlights || "[]");
 
     const uploadedImages = [];
 
-    // ✅ Upload images to Cloudinary
+    // Upload images to Cloudinary
     for (let file of req.files) {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -29,7 +31,9 @@ export const createBulkProduct = async (req, res) => {
     const product = await BulkProduct.create({
       title,
       category,
-      variants: parsedVariants,
+      sizes: parsedSizes,
+      packs: parsedPacks,
+      priceMatrix: parsedPriceMatrix,
       amazonLink,
       description,
       highlights: parsedHighlights,
@@ -46,9 +50,7 @@ export const createBulkProduct = async (req, res) => {
 // ✅ GET ALL BULK PRODUCTS
 export const getBulkProducts = async (req, res) => {
   try {
-    console.log("Fetching bulk products...");
     const products = await BulkProduct.find();
-    console.log("Products:", products);
     res.status(200).json(products);
   } catch (error) {
     console.error("Bulk fetch error:", error);
@@ -70,17 +72,20 @@ export const getBulkProductById = async (req, res) => {
   }
 };
 
+// ✅ UPDATE BULK PRODUCT
 export const updateBulkProduct = async (req, res) => {
   try {
     const { title, category, amazonLink, description } = req.body;
 
-    const parsedVariants = JSON.parse(req.body.variants || "[]");
+    const parsedSizes = JSON.parse(req.body.sizes || "[]");
+    const parsedPacks = JSON.parse(req.body.packs || "[]");
+    const parsedPriceMatrix = JSON.parse(req.body.priceMatrix || "[]");
     const parsedHighlights = JSON.parse(req.body.highlights || "[]");
     const parsedExistingImages = JSON.parse(req.body.existingImages || "[]");
 
     let uploadedImages = [];
 
-    // 🔥 Upload new images if any
+    // Upload new images if any
     if (req.files && req.files.length > 0) {
       for (let file of req.files) {
         const result = await new Promise((resolve, reject) => {
@@ -98,7 +103,7 @@ export const updateBulkProduct = async (req, res) => {
       }
     }
 
-    // 🔥 Merge existing + new images
+    // Merge existing + new images
     const finalImages = [...parsedExistingImages, ...uploadedImages];
 
     const updatedProduct = await BulkProduct.findByIdAndUpdate(
@@ -108,7 +113,9 @@ export const updateBulkProduct = async (req, res) => {
         category,
         amazonLink,
         description,
-        variants: parsedVariants,
+        sizes: parsedSizes,
+        packs: parsedPacks,
+        priceMatrix: parsedPriceMatrix,
         highlights: parsedHighlights,
         images: finalImages,
       },

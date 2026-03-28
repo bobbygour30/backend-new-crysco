@@ -7,16 +7,14 @@ const bulkOrderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-
     product: {
       productId: String,
       title: String,
       price: Number,
-      size: String,
+      size: String,  // This will store "Small / 3 Rolls" format
       color: String,
       image: String,
     },
-
     shippingAddress: {
       fullName: String,
       phone: String,
@@ -24,11 +22,9 @@ const bulkOrderSchema = new mongoose.Schema(
       city: String,
       pincode: String,
     },
-
     paymentId: String,
     orderId: String,
     signature: String,
-
     paymentStatus: {
       type: String,
       default: "Paid",

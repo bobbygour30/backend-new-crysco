@@ -1,6 +1,10 @@
 import mongoose from "mongoose";
 
-const variantSchema = new mongoose.Schema({
+const priceMatrixSchema = new mongoose.Schema({
+  size: {
+    type: String,
+    required: true,
+  },
   pack: {
     type: String,
     required: true,
@@ -25,7 +29,9 @@ const bulkProductSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    variants: [variantSchema],
+    sizes: [String],  // Array of available sizes
+    packs: [String],  // Array of available packs
+    priceMatrix: [priceMatrixSchema],  // Matrix of prices for each size+pack combination
     amazonLink: String,
     description: String,
     highlights: [String],
