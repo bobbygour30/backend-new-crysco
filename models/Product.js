@@ -1,14 +1,36 @@
 import mongoose from "mongoose";
 
+const priceMatrixSchema = new mongoose.Schema({
+  size: {
+    type: String,
+    required: true,
+  },
+  pack: {
+    type: String,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  salePrice: {
+    type: Number,
+    required: true,
+  },
+});
+
 const productSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  category: {  type: String,
+  category: { 
+    type: String,
     required: true,
     lowercase: true,
     trim: true,
-   },
+  },
   categoryType: { type: String },
-  sizes: { type: [String],default: [] },
+  sizes: { type: [String], default: [] },
+  packs: { type: [String], default: [] },
+  priceMatrix: [priceMatrixSchema],
   mrp: { type: Number },
   salePrice: { type: Number },
   amazonLink: { type: String },
@@ -17,7 +39,7 @@ const productSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
-  images: [{ type: String }], // Cloudinary URLs
+  images: [{ type: String }],
   amazingDeals: {
     type: Boolean,
     default: false,

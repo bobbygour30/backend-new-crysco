@@ -3,10 +3,11 @@ import cloudinary from "../config/cloudnary.js";
 import { Readable } from "stream";
 
 console.log("Cloudinary Config Loaded:", cloudinary.config());
+
 // Add Product
 export const addProduct = async (req, res) => {
   try {
-    const { title, category, categoryType, sizes, mrp, salePrice, amazonLink, description, highlights } = req.body;
+    const { title, category, categoryType, sizes, packs, priceMatrix, mrp, salePrice, amazonLink, description, highlights } = req.body;
 
     // Upload images to Cloudinary
     const imageUrls = await Promise.all(
@@ -22,13 +23,14 @@ export const addProduct = async (req, res) => {
       }))
     );
 
-
     let parsedSizes = [];
+    let parsedPacks = [];
+    let parsedPriceMatrix = [];
 
+    // Parse sizes
     if (sizes) {
       try {
         const temp = JSON.parse(sizes);
-
         if (Array.isArray(temp)) {
           parsedSizes = temp;
         } else if (typeof temp === "string") {
@@ -39,11 +41,36 @@ export const addProduct = async (req, res) => {
       }
     }
 
+    // Parse packs
+    if (packs) {
+      try {
+        const temp = JSON.parse(packs);
+        if (Array.isArray(temp)) {
+          parsedPacks = temp;
+        } else if (typeof temp === "string") {
+          parsedPacks = temp.split(",").map(p => p.trim());
+        }
+      } catch (err) {
+        parsedPacks = packs.split(",").map(p => p.trim());
+      }
+    }
+
+    // Parse price matrix
+    if (priceMatrix) {
+      try {
+        parsedPriceMatrix = JSON.parse(priceMatrix);
+      } catch (err) {
+        parsedPriceMatrix = [];
+      }
+    }
+
     const product = await Product.create({
       title,
       category,
       categoryType,
       sizes: parsedSizes,
+      packs: parsedPacks,
+      priceMatrix: parsedPriceMatrix,
       mrp,
       salePrice,
       amazonLink,
@@ -59,20 +86,10 @@ export const addProduct = async (req, res) => {
   }
 };
 
-
-
-
-
 // Get all products
 export const getProducts = async (req, res) => {
-  // try {
-  //   const products = await Product.find().sort({ createdAt: -1 });
-  //   res.json(products);
-  // } catch (error) {
-  //   res.status(500).json({ message: "Server error" });
-  // }
   try {
-    const { category } = req.query; // read category from query string
+    const { category } = req.query;
     let filter = {};
 
     if (category) {
@@ -88,7 +105,6 @@ export const getProducts = async (req, res) => {
   }
 };
 
-
 // Get product by ID
 export const getProduct = async (req, res) => {
   try {
@@ -100,17 +116,6 @@ export const getProduct = async (req, res) => {
   }
 };
 
-
-
-
-
-
-
-
-
-// ==========================
-// UPDATE PRODUCT
-// ==========================
 // Update Product
 export const updateProduct = async (req, res) => {
   try {
@@ -119,6 +124,8 @@ export const updateProduct = async (req, res) => {
       category,
       categoryType,
       sizes,
+      packs,
+      priceMatrix,
       mrp,
       salePrice,
       amazonLink,
@@ -135,16 +142,11 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    /* ==============================
-       SAFE SIZES PARSE
-    ============================== */
-
+    // Parse sizes
     let parsedSizes = [];
-
     if (sizes) {
       try {
         const temp = JSON.parse(sizes);
-
         if (Array.isArray(temp)) {
           parsedSizes = temp;
         } else {
@@ -155,12 +157,33 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    /* ==============================
-       SAFE HIGHLIGHTS PARSE
-    ============================== */
+    // Parse packs
+    let parsedPacks = [];
+    if (packs) {
+      try {
+        const temp = JSON.parse(packs);
+        if (Array.isArray(temp)) {
+          parsedPacks = temp;
+        } else {
+          parsedPacks = temp.split(",").map((p) => p.trim());
+        }
+      } catch {
+        parsedPacks = packs.split(",").map((p) => p.trim());
+      }
+    }
 
+    // Parse price matrix
+    let parsedPriceMatrix = [];
+    if (priceMatrix) {
+      try {
+        parsedPriceMatrix = JSON.parse(priceMatrix);
+      } catch {
+        parsedPriceMatrix = [];
+      }
+    }
+
+    // Parse highlights
     let parsedHighlights = [];
-
     if (highlights) {
       try {
         const temp = JSON.parse(highlights);
@@ -172,12 +195,8 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    /* ==============================
-       EXISTING IMAGES PARSE
-    ============================== */
-
+    // Parse existing images
     let parsedExistingImages = product.images;
-
     if (existingImages) {
       try {
         parsedExistingImages = JSON.parse(existingImages);
@@ -186,10 +205,7 @@ export const updateProduct = async (req, res) => {
       }
     }
 
-    /* ==============================
-       BASIC UPDATE
-    ============================== */
-
+    // Basic update
     product.title = title || product.title;
     product.category = category || product.category;
     product.mrp = mrp || product.mrp;
@@ -197,34 +213,25 @@ export const updateProduct = async (req, res) => {
     product.amazonLink = amazonLink || product.amazonLink;
     product.description = description || product.description;
     product.highlights = parsedHighlights;
+    product.sizes = parsedSizes;
+    product.packs = parsedPacks;
+    product.priceMatrix = parsedPriceMatrix;
 
-    /* ==============================
-       CATEGORY LOGIC
-    ============================== */
-
+    // Category logic
     if (category === "garbage bags") {
       product.categoryType = categoryType || "";
-      product.sizes = parsedSizes;
     } else {
       product.categoryType = "";
-      product.sizes = [];
     }
 
-    /* ==============================
-       BOOLEAN FIX
-    ============================== */
-
+    // Boolean flags
     product.amazingDeals = amazingDeals === "true" || amazingDeals === true;
     product.newArrivals = newArrivals === "true" || newArrivals === true;
 
-    /* ==============================
-       IMAGE MERGE SYSTEM
-    ============================== */
-
+    // Image merge system
     let updatedImages = [...parsedExistingImages];
 
     if (req.files && req.files.length > 0) {
-
       const newImages = await Promise.all(
         req.files.map(
           (file) =>
@@ -256,10 +263,8 @@ export const updateProduct = async (req, res) => {
       message: "Product updated successfully",
       product,
     });
-
   } catch (error) {
     console.error("Update Error:", error);
-
     res.status(500).json({
       message: "Server error while updating product",
     });
