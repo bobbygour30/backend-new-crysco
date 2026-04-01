@@ -64,6 +64,20 @@ export const addProduct = async (req, res) => {
       }
     }
 
+    // For garbage bags, mrp and salePrice might be null/undefined
+    let parsedMrp = null;
+    let parsedSalePrice = null;
+    
+    if (category === "garbage bags") {
+      // If it's garbage bags with price matrix, we don't need mrp/salePrice
+      parsedMrp = null;
+      parsedSalePrice = null;
+    } else {
+      // For other categories, parse the numbers
+      parsedMrp = mrp && mrp !== "null" && mrp !== null ? Number(mrp) : null;
+      parsedSalePrice = salePrice && salePrice !== "null" && salePrice !== null ? Number(salePrice) : null;
+    }
+
     const product = await Product.create({
       title,
       category,
@@ -71,8 +85,8 @@ export const addProduct = async (req, res) => {
       sizes: parsedSizes,
       packs: parsedPacks,
       priceMatrix: parsedPriceMatrix,
-      mrp,
-      salePrice,
+      mrp: parsedMrp,
+      salePrice: parsedSalePrice,
       amazonLink,
       description,
       highlights: highlights ? JSON.parse(highlights) : [],
@@ -205,11 +219,29 @@ export const updateProduct = async (req, res) => {
       }
     }
 
+    // Handle mrp and salePrice based on category
+    let parsedMrp = null;
+    let parsedSalePrice = null;
+    
+    if (category === "garbage bags") {
+      // For garbage bags, we use price matrix, so mrp/salePrice should be null
+      parsedMrp = null;
+      parsedSalePrice = null;
+    } else {
+      // For other categories, parse the numbers if they exist and are not "null"
+      if (mrp && mrp !== "null" && mrp !== null && mrp !== "") {
+        parsedMrp = Number(mrp);
+      }
+      if (salePrice && salePrice !== "null" && salePrice !== null && salePrice !== "") {
+        parsedSalePrice = Number(salePrice);
+      }
+    }
+
     // Basic update
     product.title = title || product.title;
     product.category = category || product.category;
-    product.mrp = mrp || product.mrp;
-    product.salePrice = salePrice || product.salePrice;
+    product.mrp = parsedMrp;
+    product.salePrice = parsedSalePrice;
     product.amazonLink = amazonLink || product.amazonLink;
     product.description = description || product.description;
     product.highlights = parsedHighlights;
