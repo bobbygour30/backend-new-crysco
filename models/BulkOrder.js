@@ -11,7 +11,7 @@ const bulkOrderSchema = new mongoose.Schema(
       productId: String,
       title: String,
       price: Number,
-      size: String,  // This will store "Small / 3 Rolls" format
+      size: String,
       color: String,
       image: String,
     },
@@ -29,6 +29,11 @@ const bulkOrderSchema = new mongoose.Schema(
       type: String,
       default: "Paid",
     },
+    orderStatus: {
+      type: String,
+      default: "Processing",
+      enum: ["Processing", "Confirmed", "Shipped", "Out for Delivery", "Delivered", "Cancelled"]
+    }
   },
   { timestamps: true }
 );

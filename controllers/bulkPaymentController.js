@@ -60,21 +60,22 @@ export const verifyBulkPayment = async (req, res) => {
 
     // ✅ Create order with proper size information
     const order = await BulkOrder.create({
-      userId: req.user._id,
-      product: {
-        productId: product._id,
-        title: product.title,
-        price: product.price,
-        size: product.size || null,  // ✅ Store the selected size
-        color: product.color || null,
-        image: product.image,
-      },
-      shippingAddress,
-      paymentId: razorpay_payment_id,
-      orderId: razorpay_order_id,
-      signature: razorpay_signature,
-    });
-
+  userId: req.user._id,
+  product: {
+    productId: product._id,
+    title: product.title,
+    price: product.price,
+    size: product.size || null,
+    color: product.color || null,
+    image: product.image,
+  },
+  shippingAddress,
+  paymentId: razorpay_payment_id,
+  orderId: razorpay_order_id,
+  signature: razorpay_signature,
+  paymentStatus: "Paid",
+  orderStatus: "Processing", // Add this line
+});
     res.json({
       success: true,
       order,
